@@ -13,7 +13,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 var app = builder.Build();
 
