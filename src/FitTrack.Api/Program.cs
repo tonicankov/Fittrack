@@ -17,6 +17,11 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue("Database:InitializeOnStartup", true))
+{
+    await DatabaseInitializer.InitializeAsync(app.Services, app.Logger);
+}
+
 if (app.Environment.IsDevelopment())
 {
     // OpenAPI document at /openapi/v1.json
