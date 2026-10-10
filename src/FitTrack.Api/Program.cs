@@ -1,7 +1,12 @@
 using System.Text.Json.Serialization;
+using FitTrack.Api.Auth;
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +24,32 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
+
+// Authentication: JWT bearer tokens issued by TokenService
+builder.Services.AddOptions<JwtOptions>()
+    .BindConfiguration(JwtOptions.SectionName)
+    .Validate(o => o.SigningKey.Length >= 32, "Jwt:SigningKey must be at least 32 characters long.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<TokenService>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((options, jwtOptions) =>
+    {
+        var jwt = jwtOptions.Value;
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = jwt.Issuer,
+            ValidAudience = jwt.Audience,
+            IssuerSigningKey = jwt.CreateSigningKey(),
+            NameClaimType = AppClaims.Name,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+// Every endpoint requires a logged-in member unless it opts out with AllowAnonymous()
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 var app = builder.Build();
@@ -31,14 +62,18 @@ if (app.Configuration.GetValue("Database:InitializeOnStartup", true))
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
     // OpenAPI document at /openapi/v1.json
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapGet("/", () => Results.Ok(new { name = "FitTrack API", status = "running" }))
+   .AllowAnonymous()
    .ExcludeFromDescription();
 
 app.Run();
