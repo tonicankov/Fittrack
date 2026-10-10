@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +14,10 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.UseMySQL(connectionString);
 });
 
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
@@ -21,6 +27,9 @@ if (app.Configuration.GetValue("Database:InitializeOnStartup", true))
 {
     await DatabaseInitializer.InitializeAsync(app.Services, app.Logger);
 }
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
