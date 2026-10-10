@@ -33,3 +33,6 @@ app.MapGet("/", () => Results.Ok(new { name = "FitTrack API", status = "running"
    .ExcludeFromDescription();
 
 app.Run();
+
+// Lets the integration tests start the app with WebApplicationFactory<Program>.
+public partial class Program;
