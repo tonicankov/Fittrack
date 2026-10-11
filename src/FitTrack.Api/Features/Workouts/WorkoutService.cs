@@ -72,6 +72,23 @@ public sealed class WorkoutService(AppDbContext db, MemberSettingsProvider membe
         return Page<WorkoutDto>.From(rows, PageSize, w => w.PerformedAt, WorkoutDto.From);
     }
 
+    /// <summary>Names of exercises the member logged before, so the same exercise is always spelled the same way.</summary>
+    public async Task<List<string>> SuggestExerciseNamesAsync(Guid userId, string? prefix, CancellationToken ct)
+    {
+        // Lower-case both sides so the match does not depend on the column collation
+        var start = (Validator.Clean(prefix) ?? "").ToLowerInvariant();
+
+        return await (
+                from x in db.WorkoutExercises
+                join w in db.Workouts on x.WorkoutId equals w.Id
+                where w.UserId == userId && x.Name.ToLower().StartsWith(start)
+                select x.Name)
+            .Distinct()
+            .OrderBy(name => name)
+            .Take(10)
+            .ToListAsync(ct);
+    }
+
     private async Task<Workout> LoadOwnAsync(Guid userId, Guid id, CancellationToken ct) =>
         await WithExercises(db.Workouts).SingleOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct)
         ?? throw new NotFoundException();

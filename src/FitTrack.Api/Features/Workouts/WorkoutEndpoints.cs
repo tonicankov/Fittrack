@@ -34,6 +34,10 @@ public static class WorkoutEndpoints
             return Results.NoContent();
         });
 
+        app.MapGet("/api/exercises/suggestions", async (string? q, ClaimsPrincipal user, WorkoutService workouts, CancellationToken ct) =>
+                Results.Ok(await workouts.SuggestExerciseNamesAsync(user.GetUserId(), q, ct)))
+            .WithTags("Workouts");
+
         return app;
     }
 }
