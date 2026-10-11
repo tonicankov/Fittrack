@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FitTrack.Api.Auth;
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
+using FitTrack.Api.Features.Invites;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<InviteService>();
 
 // Authentication: JWT bearer tokens issued by TokenService
 builder.Services.AddOptions<JwtOptions>()
@@ -57,6 +60,12 @@ var app = builder.Build();
 if (app.Configuration.GetValue("Database:InitializeOnStartup", true))
 {
     await DatabaseInitializer.InitializeAsync(app.Services, app.Logger);
+}
+
+if (app.Configuration.GetValue("Invites:BootstrapOnStartup", true))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider.GetRequiredService<InviteService>().EnsureBootstrapInviteAsync(CancellationToken.None);
 }
 
 app.UseExceptionHandler();
