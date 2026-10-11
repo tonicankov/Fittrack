@@ -91,6 +91,7 @@ app.MapGet("/", () => Results.Ok(new { name = "FitTrack API", status = "running"
    .ExcludeFromDescription();
 
 app.MapAccountEndpoints();
+app.MapInviteEndpoints();
 
 app.Run();
 
