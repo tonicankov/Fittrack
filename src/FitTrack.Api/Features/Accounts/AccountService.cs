@@ -122,6 +122,17 @@ public sealed class AccountService(
         return MeDto.From(user);
     }
 
+    /// <summary>
+    /// Deletes the account. Every table that refers to the user cascades in the database,
+    /// so this removes all of the member's data (GDPR right to erasure).
+    /// </summary>
+    public async Task DeleteAccountAsync(Guid userId, CancellationToken ct)
+    {
+        var user = await FindUserAsync(userId, ct);
+        db.Users.Remove(user);
+        await db.SaveChangesAsync(ct);
+    }
+
     private async Task<User> FindUserAsync(Guid userId, CancellationToken ct) =>
         await db.Users.SingleOrDefaultAsync(u => u.Id == userId, ct) ?? throw new NotFoundException();
 

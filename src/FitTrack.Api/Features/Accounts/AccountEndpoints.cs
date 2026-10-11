@@ -23,6 +23,12 @@ public static class AccountEndpoints
         me.MapPut("", async (UpdateProfileRequest request, ClaimsPrincipal user, AccountService accounts, CancellationToken ct) =>
             Results.Ok(await accounts.UpdateProfileAsync(user.GetUserId(), request, ct)));
 
+        me.MapDelete("", async (ClaimsPrincipal user, AccountService accounts, CancellationToken ct) =>
+        {
+            await accounts.DeleteAccountAsync(user.GetUserId(), ct);
+            return Results.NoContent();
+        });
+
         return app;
     }
 }
