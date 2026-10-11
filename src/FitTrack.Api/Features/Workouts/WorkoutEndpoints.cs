@@ -25,6 +25,15 @@ public static class WorkoutEndpoints
             return Results.Created($"/api/workouts/{workout.Id}", workout);
         });
 
+        group.MapPut("/{id:guid}", async (Guid id, WorkoutRequest request, ClaimsPrincipal user, WorkoutService workouts, CancellationToken ct) =>
+            Results.Ok(await workouts.UpdateAsync(user.GetUserId(), id, request, ct)));
+
+        group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, WorkoutService workouts, CancellationToken ct) =>
+        {
+            await workouts.DeleteAsync(user.GetUserId(), id, ct);
+            return Results.NoContent();
+        });
+
         return app;
     }
 }

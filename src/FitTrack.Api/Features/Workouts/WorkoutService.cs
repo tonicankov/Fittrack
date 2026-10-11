@@ -23,6 +23,30 @@ public sealed class WorkoutService(AppDbContext db, MemberSettingsProvider membe
         return WorkoutDto.From(workout);
     }
 
+    public async Task<WorkoutDto> UpdateAsync(Guid userId, Guid id, WorkoutRequest request, CancellationToken ct)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        WorkoutValidation.Validate(request, now);
+
+        var workout = await LoadOwnAsync(userId, id, ct);
+        // Exercises and sets are replaced as a whole; that is simpler than diffing them
+        db.WorkoutExercises.RemoveRange(workout.Exercises);
+        Apply(workout, request, request.Visibility ?? workout.Visibility, now);
+        // The new rows already have their Guid keys, so add them explicitly;
+        // otherwise EF would take them for existing rows and try to update them.
+        db.WorkoutExercises.AddRange(workout.Exercises);
+        await db.SaveChangesAsync(ct);
+
+        return WorkoutDto.From(workout);
+    }
+
+    public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct)
+    {
+        var workout = await LoadOwnAsync(userId, id, ct);
+        db.Workouts.Remove(workout);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<WorkoutDto> GetAsync(Guid viewerId, Guid id, CancellationToken ct)
     {
         var workout = await WithExercises(db.Workouts.AsNoTracking())
@@ -47,6 +71,10 @@ public sealed class WorkoutService(AppDbContext db, MemberSettingsProvider membe
         var rows = await query.OrderByDescending(w => w.PerformedAt).Take(PageSize + 1).ToListAsync(ct);
         return Page<WorkoutDto>.From(rows, PageSize, w => w.PerformedAt, WorkoutDto.From);
     }
+
+    private async Task<Workout> LoadOwnAsync(Guid userId, Guid id, CancellationToken ct) =>
+        await WithExercises(db.Workouts).SingleOrDefaultAsync(w => w.Id == id && w.UserId == userId, ct)
+        ?? throw new NotFoundException();
 
     private static IQueryable<Workout> WithExercises(IQueryable<Workout> query) =>
         query.Include(w => w.Exercises).ThenInclude(x => x.Sets);
