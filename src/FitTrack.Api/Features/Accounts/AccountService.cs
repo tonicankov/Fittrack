@@ -97,6 +97,34 @@ public sealed class AccountService(
         return CreateResponse(user);
     }
 
+    public async Task<MeDto> GetMeAsync(Guid userId, CancellationToken ct) =>
+        MeDto.From(await FindUserAsync(userId, ct));
+
+    public async Task<MeDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct)
+    {
+        var timeZone = Validator.Clean(request.TimeZone);
+        var validator = new Validator().Text("displayName", request.DisplayName, 50);
+        if (timeZone is null || !TimeZones.IsValid(timeZone))
+        {
+            validator.Add("timeZone", "Unknown time zone.");
+        }
+        if (request.DefaultVisibility is null)
+        {
+            validator.Add("defaultVisibility", "Required.");
+        }
+        validator.ThrowIfInvalid();
+
+        var user = await FindUserAsync(userId, ct);
+        user.DisplayName = request.DisplayName!.Trim();
+        user.TimeZone = timeZone!;
+        user.DefaultVisibility = request.DefaultVisibility!.Value;
+        await db.SaveChangesAsync(ct);
+        return MeDto.From(user);
+    }
+
+    private async Task<User> FindUserAsync(Guid userId, CancellationToken ct) =>
+        await db.Users.SingleOrDefaultAsync(u => u.Id == userId, ct) ?? throw new NotFoundException();
+
     private AuthResponse CreateResponse(User user)
     {
         var token = tokens.CreateToken(user);

@@ -13,3 +13,5 @@ public sealed record MeDto(Guid Id, string Email, string DisplayName, string Tim
     public static MeDto From(User user) =>
         new(user.Id, user.Email, user.DisplayName, user.TimeZone, user.DefaultVisibility, user.CreatedAt);
 }
+
+public sealed record UpdateProfileRequest(string? DisplayName, string? TimeZone, Visibility? DefaultVisibility);
