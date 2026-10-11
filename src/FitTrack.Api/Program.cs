@@ -2,9 +2,12 @@ using System.Text.Json.Serialization;
 using FitTrack.Api.Auth;
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
+using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Accounts;
 using FitTrack.Api.Features.Invites;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -26,7 +29,9 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<InviteService>();
+builder.Services.AddScoped<AccountService>();
 
 // Authentication: JWT bearer tokens issued by TokenService
 builder.Services.AddOptions<JwtOptions>()
@@ -84,6 +89,8 @@ app.MapHealthChecks("/health").AllowAnonymous();
 app.MapGet("/", () => Results.Ok(new { name = "FitTrack API", status = "running" }))
    .AllowAnonymous()
    .ExcludeFromDescription();
+
+app.MapAccountEndpoints();
 
 app.Run();
 
