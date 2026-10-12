@@ -15,6 +15,9 @@ public static class MealEndpoints
             return Results.Ok(await meals.ListAsync(me, userId ?? me, date, ct));
         });
 
+        group.MapGet("/daily-totals", async (DateOnly? from, DateOnly? to, ClaimsPrincipal user, MealService meals, CancellationToken ct) =>
+            Results.Ok(await meals.GetDailyTotalsAsync(user.GetUserId(), from, to, ct)));
+
         group.MapPost("", async (MealRequest request, ClaimsPrincipal user, MealService meals, CancellationToken ct) =>
         {
             var meal = await meals.CreateAsync(user.GetUserId(), request, ct);

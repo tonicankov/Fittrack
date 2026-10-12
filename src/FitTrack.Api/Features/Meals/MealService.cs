@@ -56,6 +56,25 @@ public sealed class MealService(AppDbContext db, MemberSettingsProvider members,
         return meals.Select(MealDto.From).ToList();
     }
 
+    public const int MaxRangeDays = 366;
+
+    /// <summary>Daily totals of the member's own meals; defaults to the last 7 days.</summary>
+    public async Task<List<DailyTotalsDto>> GetDailyTotalsAsync(Guid userId, DateOnly? from, DateOnly? to, CancellationToken ct)
+    {
+        var tz = (await members.GetAsync(userId, ct)).TimeZone;
+        var last = to ?? TimeZones.Today(time, tz);
+        var first = from ?? last.AddDays(-6);
+
+        if (first > last || last.DayNumber - first.DayNumber >= MaxRangeDays)
+        {
+            throw RequestValidationException.For("from", $"Choose a range of 1 to {MaxRangeDays} days.");
+        }
+
+        var meals = await MealsBetween(db.Meals.AsNoTracking().Where(m => m.UserId == userId), first, last, tz)
+            .ToListAsync(ct);
+        return Nutrition.DailyTotals(meals, tz);
+    }
+
     private async Task<Meal> LoadOwnAsync(Guid userId, Guid id, CancellationToken ct) =>
         await db.Meals.SingleOrDefaultAsync(m => m.Id == id && m.UserId == userId, ct) ?? throw new NotFoundException();
 
