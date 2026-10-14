@@ -100,6 +100,31 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
         return goals.Select(g => ToDto(g, inputs)).ToList();
     }
 
+    /// <summary>
+    /// Re-checks the member's active goals after new data was logged, and marks a
+    /// body-weight goal as achieved once the latest weight reaches the target.
+    /// </summary>
+    public async Task EvaluateAsync(Guid userId, CancellationToken ct)
+    {
+        var goal = await db.Goals.SingleOrDefaultAsync(
+            g => g.UserId == userId && g.Metric == GoalMetric.BodyWeight && g.Status == GoalStatus.Active, ct);
+        if (goal is null || await LatestWeightAsync(userId, ct) is not { } weight)
+        {
+            return;
+        }
+
+        // A goal created before the first weigh-in starts from the first measurement
+        goal.StartValue ??= weight;
+
+        if (GoalMath.IsWeightReached(goal.StartValue, goal.TargetValue, weight))
+        {
+            goal.Status = GoalStatus.Achieved;
+            goal.AchievedAt = time.GetUtcNow().UtcDateTime;
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
     private static void ValidateTarget(Validator v, GoalMetric metric, decimal? target, DateOnly? targetDate, DateOnly today)
     {
         var (min, max) = GoalRules.TargetRange(metric);

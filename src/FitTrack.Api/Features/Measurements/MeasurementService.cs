@@ -1,11 +1,12 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Goals;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Measurements;
 
-public sealed class MeasurementService(AppDbContext db, MemberSettingsProvider members, TimeProvider time)
+public sealed class MeasurementService(AppDbContext db, MemberSettingsProvider members, GoalService goals, TimeProvider time)
 {
     /// <summary>
     /// Records the measurement of a day. There is at most one per day, so recording
@@ -44,6 +45,8 @@ public sealed class MeasurementService(AppDbContext db, MemberSettingsProvider m
         measurement.WaistCm = request.WaistCm;
         measurement.Visibility = request.Visibility ?? measurement.Visibility;
         await db.SaveChangesAsync(ct);
+
+        await goals.EvaluateAsync(userId, ct);
 
         return MeasurementDto.From(measurement);
     }
