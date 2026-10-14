@@ -1,6 +1,7 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Meals;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Goals;
@@ -36,7 +37,7 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
         db.Goals.Add(goal);
         await db.SaveChangesAsync(ct);
 
-        return ToDto(goal);
+        return ToDto(goal, await LoadProgressInputsAsync(userId, ct));
     }
 
     public async Task<GoalDto> UpdateAsync(Guid userId, Guid id, UpdateGoalRequest request, CancellationToken ct)
@@ -72,7 +73,7 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
         }
 
         await db.SaveChangesAsync(ct);
-        return ToDto(goal);
+        return ToDto(goal, await LoadProgressInputsAsync(userId, ct));
     }
 
     public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct)
@@ -95,7 +96,8 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
             .ThenByDescending(g => g.CreatedAt)
             .ToListAsync(ct);
 
-        return goals.Select(ToDto).ToList();
+        var inputs = await LoadProgressInputsAsync(ownerId, ct);
+        return goals.Select(g => ToDto(g, inputs)).ToList();
     }
 
     private static void ValidateTarget(Validator v, GoalMetric metric, decimal? target, DateOnly? targetDate, DateOnly today)
@@ -131,7 +133,75 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
     private async Task<Goal> LoadOwnAsync(Guid userId, Guid id, CancellationToken ct) =>
         await db.Goals.SingleOrDefaultAsync(g => g.Id == id && g.UserId == userId, ct) ?? throw new NotFoundException();
 
-    private static GoalDto ToDto(Goal g) => new(
+    /// <summary>The logged data that goal progress is computed from.</summary>
+    private sealed record ProgressInputs(decimal? LatestWeight, int WorkoutsThisWeek, DailyTotalsDto? Today);
+
+    private async Task<ProgressInputs> LoadProgressInputsAsync(Guid ownerId, CancellationToken ct)
+    {
+        var tz = (await members.GetAsync(ownerId, ct)).TimeZone;
+        var today = TimeZones.Today(time, tz);
+
+        var weekStart = TimeZones.StartOfDayUtc(TimeZones.WeekStart(today), tz);
+        var weekEnd = TimeZones.StartOfDayUtc(TimeZones.WeekStart(today).AddDays(7), tz);
+        var workoutsThisWeek = await db.Workouts
+            .CountAsync(w => w.UserId == ownerId && w.PerformedAt >= weekStart && w.PerformedAt < weekEnd, ct);
+
+        var todaysMeals = await MealService.MealsBetween(db.Meals.AsNoTracking().Where(m => m.UserId == ownerId), today, today, tz)
+            .ToListAsync(ct);
+
+        return new ProgressInputs(
+            await LatestWeightAsync(ownerId, ct),
+            workoutsThisWeek,
+            Nutrition.DailyTotals(todaysMeals, tz).FirstOrDefault());
+    }
+
+    private static GoalProgressDto? Progress(Goal goal, ProgressInputs inputs)
+    {
+        if (goal.Status == GoalStatus.Archived)
+        {
+            return null;
+        }
+
+        switch (goal.Metric)
+        {
+            case GoalMetric.BodyWeight:
+                var reached = goal.Status == GoalStatus.Achieved
+                    || (inputs.LatestWeight is { } weight && GoalMath.IsWeightReached(goal.StartValue, goal.TargetValue, weight));
+                return new GoalProgressDto(
+                    inputs.LatestWeight,
+                    reached ? 100 : GoalMath.WeightPercent(goal.StartValue, goal.TargetValue, inputs.LatestWeight),
+                    reached,
+                    "latest");
+
+            case GoalMetric.WorkoutsPerWeek:
+                return new GoalProgressDto(
+                    inputs.WorkoutsThisWeek,
+                    GoalMath.RatioPercent(inputs.WorkoutsThisWeek, goal.TargetValue),
+                    inputs.WorkoutsThisWeek >= goal.TargetValue,
+                    "thisWeek");
+
+            case GoalMetric.DailyCalories:
+                var calories = inputs.Today?.Calories;
+                return new GoalProgressDto(
+                    calories,
+                    GoalMath.RatioPercent(calories ?? 0, goal.TargetValue),
+                    calories is { } c && GoalMath.IsCalorieTargetMet(c, goal.TargetValue),
+                    "today");
+
+            case GoalMetric.DailyProtein:
+                var protein = inputs.Today?.ProteinG;
+                return new GoalProgressDto(
+                    protein,
+                    GoalMath.RatioPercent(protein ?? 0, goal.TargetValue),
+                    protein >= goal.TargetValue,
+                    "today");
+
+            default:
+                return null;
+        }
+    }
+
+    private static GoalDto ToDto(Goal g, ProgressInputs inputs) => new(
         g.Id, g.UserId, g.Metric, g.TargetValue, g.StartValue, g.StartDate, g.TargetDate, g.Status, g.AchievedAt, g.Visibility,
-        Progress: null);
+        Progress(g, inputs));
 }
