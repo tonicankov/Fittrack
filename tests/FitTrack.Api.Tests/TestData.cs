@@ -71,4 +71,36 @@ public static class TestData
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
         return new TestUser(auth.User.Id, email, Password, auth.AccessToken, client);
     }
+
+    public static object Workout(string name = "Leg day", string? visibility = null, DateTimeOffset? performedAt = null) => new
+    {
+        name,
+        performedAt,
+        durationMinutes = 45,
+        visibility,
+        exercises = new object[]
+        {
+            new { name = "Squat", kind = "Strength", sets = new[] { new { reps = 5, weightKg = 80m }, new { reps = 5, weightKg = 85m } } },
+            new { name = "Bike", kind = "Cardio", durationSeconds = 600, distanceKm = 4.2m },
+        },
+    };
+
+    public static object Meal(string name = "Oats", int calories = 400, decimal? proteinG = 20, DateTimeOffset? eatenAt = null, string? visibility = null) => new
+    {
+        name,
+        type = "Breakfast",
+        eatenAt,
+        calories,
+        proteinG,
+        visibility,
+    };
+
+    public static async Task<T> PostAsync<T>(this HttpClient client, string url, object body) =>
+        await (await client.PostAsJsonAsync(url, body)).ReadAsync<T>();
+
+    public static async Task<T> PutAsync<T>(this HttpClient client, string url, object body) =>
+        await (await client.PutAsJsonAsync(url, body)).ReadAsync<T>();
+
+    public static async Task<T> GetAsync<T>(this HttpClient client, string url) =>
+        await (await client.GetAsync(url)).ReadAsync<T>();
 }
