@@ -4,6 +4,7 @@ using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
 using FitTrack.Api.Features.Accounts;
+using FitTrack.Api.Features.Friends;
 using FitTrack.Api.Features.Goals;
 using FitTrack.Api.Features.Invites;
 using FitTrack.Api.Features.Meals;
@@ -41,6 +42,7 @@ builder.Services.AddScoped<WorkoutService>();
 builder.Services.AddScoped<MealService>();
 builder.Services.AddScoped<MeasurementService>();
 builder.Services.AddScoped<GoalService>();
+builder.Services.AddScoped<FriendshipService>();
 
 // Authentication: JWT bearer tokens issued by TokenService
 builder.Services.AddOptions<JwtOptions>()
@@ -105,6 +107,7 @@ app.MapWorkoutEndpoints();
 app.MapMealEndpoints();
 app.MapMeasurementEndpoints();
 app.MapGoalEndpoints();
+app.MapFriendEndpoints();
 
 app.Run();
 
