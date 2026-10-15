@@ -1,12 +1,18 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Friends;
 using FitTrack.Api.Features.Goals;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Measurements;
 
-public sealed class MeasurementService(AppDbContext db, MemberSettingsProvider members, GoalService goals, TimeProvider time)
+public sealed class MeasurementService(
+    AppDbContext db,
+    MemberSettingsProvider members,
+    GoalService goals,
+    VisibilityService visibility,
+    TimeProvider time)
 {
     /// <summary>
     /// Records the measurement of a day. There is at most one per day, so recording
@@ -62,12 +68,7 @@ public sealed class MeasurementService(AppDbContext db, MemberSettingsProvider m
     /// <summary>Measurements newest first, optionally limited to a date range.</summary>
     public async Task<List<MeasurementDto>> ListAsync(Guid viewerId, Guid ownerId, DateOnly? from, DateOnly? to, CancellationToken ct)
     {
-        if (viewerId != ownerId)
-        {
-            throw new NotFoundException();
-        }
-
-        var query = db.BodyMeasurements.AsNoTracking().Where(m => m.UserId == ownerId);
+        var query = visibility.VisibleTo(db.BodyMeasurements.AsNoTracking(), viewerId).Where(m => m.UserId == ownerId);
         if (from is not null)
         {
             query = query.Where(m => m.Date >= from);

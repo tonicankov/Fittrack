@@ -1,11 +1,16 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Friends;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Workouts;
 
-public sealed class WorkoutService(AppDbContext db, MemberSettingsProvider members, TimeProvider time)
+public sealed class WorkoutService(
+    AppDbContext db,
+    MemberSettingsProvider members,
+    VisibilityService visibility,
+    TimeProvider time)
 {
     public const int PageSize = 20;
 
@@ -49,20 +54,16 @@ public sealed class WorkoutService(AppDbContext db, MemberSettingsProvider membe
 
     public async Task<WorkoutDto> GetAsync(Guid viewerId, Guid id, CancellationToken ct)
     {
-        var workout = await WithExercises(db.Workouts.AsNoTracking())
-            .SingleOrDefaultAsync(w => w.Id == id && w.UserId == viewerId, ct)
+        var workout = await WithExercises(visibility.VisibleTo(db.Workouts.AsNoTracking(), viewerId))
+            .SingleOrDefaultAsync(w => w.Id == id, ct)
             ?? throw new NotFoundException();
         return WorkoutDto.From(workout);
     }
 
     public async Task<Page<WorkoutDto>> ListAsync(Guid viewerId, Guid ownerId, DateTime? before, CancellationToken ct)
     {
-        if (viewerId != ownerId)
-        {
-            throw new NotFoundException();
-        }
-
-        var query = WithExercises(db.Workouts.AsNoTracking()).Where(w => w.UserId == ownerId);
+        var query = WithExercises(visibility.VisibleTo(db.Workouts.AsNoTracking(), viewerId))
+            .Where(w => w.UserId == ownerId);
         if (before is not null)
         {
             query = query.Where(w => w.PerformedAt < before);

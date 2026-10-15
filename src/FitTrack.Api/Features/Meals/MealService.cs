@@ -1,11 +1,16 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Friends;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Meals;
 
-public sealed class MealService(AppDbContext db, MemberSettingsProvider members, TimeProvider time)
+public sealed class MealService(
+    AppDbContext db,
+    MemberSettingsProvider members,
+    VisibilityService visibility,
+    TimeProvider time)
 {
     public async Task<MealDto> CreateAsync(Guid userId, MealRequest request, CancellationToken ct)
     {
@@ -42,14 +47,10 @@ public sealed class MealService(AppDbContext db, MemberSettingsProvider members,
     /// <summary>The meals of one calendar day in the owner's time zone (default: today).</summary>
     public async Task<List<MealDto>> ListAsync(Guid viewerId, Guid ownerId, DateOnly? date, CancellationToken ct)
     {
-        if (viewerId != ownerId)
-        {
-            throw new NotFoundException();
-        }
-
         var tz = (await members.GetAsync(ownerId, ct)).TimeZone;
         var day = date ?? TimeZones.Today(time, tz);
-        var meals = await MealsBetween(db.Meals.AsNoTracking().Where(m => m.UserId == ownerId), day, day, tz)
+        var visible = visibility.VisibleTo(db.Meals.AsNoTracking(), viewerId).Where(m => m.UserId == ownerId);
+        var meals = await MealsBetween(visible, day, day, tz)
             .OrderBy(m => m.EatenAt)
             .ToListAsync(ct);
 

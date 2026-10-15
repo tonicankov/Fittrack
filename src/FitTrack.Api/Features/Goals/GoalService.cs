@@ -1,12 +1,17 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Friends;
 using FitTrack.Api.Features.Meals;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Goals;
 
-public sealed class GoalService(AppDbContext db, MemberSettingsProvider members, TimeProvider time)
+public sealed class GoalService(
+    AppDbContext db,
+    MemberSettingsProvider members,
+    VisibilityService visibility,
+    TimeProvider time)
 {
     public async Task<GoalDto> CreateAsync(Guid userId, CreateGoalRequest request, CancellationToken ct)
     {
@@ -85,19 +90,29 @@ public sealed class GoalService(AppDbContext db, MemberSettingsProvider members,
     /// <summary>Active goals first, then the rest, newest first.</summary>
     public async Task<List<GoalDto>> ListAsync(Guid viewerId, Guid ownerId, CancellationToken ct)
     {
-        if (viewerId != ownerId)
-        {
-            throw new NotFoundException();
-        }
-
-        var goals = await db.Goals.AsNoTracking()
+        var goals = await visibility.VisibleTo(db.Goals.AsNoTracking(), viewerId)
             .Where(g => g.UserId == ownerId)
             .OrderBy(g => g.Status == GoalStatus.Active ? 0 : 1)
             .ThenByDescending(g => g.CreatedAt)
             .ToListAsync(ct);
 
+        if (goals.Count == 0)
+        {
+            return [];
+        }
+
         var inputs = await LoadProgressInputsAsync(ownerId, ct);
-        return goals.Select(g => ToDto(g, inputs)).ToList();
+        var dtos = goals.Select(g => ToDto(g, inputs));
+
+        // Progress can be computed from private entries (a private weigh-in, private meals).
+        // Friends see how far along a shared goal is, but not the underlying numbers.
+        return viewerId == ownerId
+            ? dtos.ToList()
+            : dtos.Select(d => d with
+            {
+                StartValue = null,
+                Progress = d.Progress is null ? null : d.Progress with { Current = null },
+            }).ToList();
     }
 
     /// <summary>

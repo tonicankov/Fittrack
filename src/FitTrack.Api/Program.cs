@@ -43,6 +43,7 @@ builder.Services.AddScoped<MealService>();
 builder.Services.AddScoped<MeasurementService>();
 builder.Services.AddScoped<GoalService>();
 builder.Services.AddScoped<FriendshipService>();
+builder.Services.AddScoped<VisibilityService>();
 
 // Authentication: JWT bearer tokens issued by TokenService
 builder.Services.AddOptions<JwtOptions>()
