@@ -139,6 +139,27 @@ public sealed class FriendshipService(AppDbContext db, TimeProvider time)
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>The profile of yourself or a friend. Anyone else is "not found".</summary>
+    public async Task<UserProfileDto> GetProfileAsync(Guid viewerId, Guid userId, CancellationToken ct)
+    {
+        var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new NotFoundException();
+
+        if (userId == viewerId)
+        {
+            return new UserProfileDto(user.Id, user.DisplayName, IsSelf: true, IsFriend: false, FriendsSince: null);
+        }
+
+        var friendship = await FindBetweenAsync(viewerId, userId, ct);
+        if (friendship is not { Status: FriendshipStatus.Accepted })
+        {
+            throw new NotFoundException();
+        }
+
+        return new UserProfileDto(user.Id, user.DisplayName, IsSelf: false, IsFriend: true,
+            FriendsSince: friendship.RespondedAt ?? friendship.CreatedAt);
+    }
+
     private Task<Friendship?> FindBetweenAsync(Guid a, Guid b, CancellationToken ct) =>
         db.Friendships.SingleOrDefaultAsync(
             f => (f.RequesterId == a && f.AddresseeId == b) || (f.RequesterId == b && f.AddresseeId == a), ct);

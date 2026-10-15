@@ -7,3 +7,5 @@ public sealed record FriendDto(Guid UserId, string DisplayName, DateTime Since);
 public sealed record FriendRequestDto(Guid Id, Guid UserId, string DisplayName, string Direction, DateTime CreatedAt);
 
 public sealed record SendFriendRequest(string? Email);
+
+public sealed record UserProfileDto(Guid Id, string DisplayName, bool IsSelf, bool IsFriend, DateTime? FriendsSince);

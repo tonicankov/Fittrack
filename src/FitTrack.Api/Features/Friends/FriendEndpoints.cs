@@ -37,6 +37,11 @@ public static class FriendEndpoints
             return Results.NoContent();
         });
 
+        // A friend's profile; their shared entries come from the list endpoints with ?userId=
+        app.MapGet("/api/users/{id:guid}", async (Guid id, ClaimsPrincipal user, FriendshipService friends, CancellationToken ct) =>
+                Results.Ok(await friends.GetProfileAsync(user.GetUserId(), id, ct)))
+            .WithTags("Friends");
+
         return app;
     }
 }
