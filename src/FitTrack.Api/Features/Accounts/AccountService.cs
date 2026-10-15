@@ -60,6 +60,20 @@ public sealed class AccountService(
         invite.UsedById = user.Id;
         invite.UsedAt = now;
 
+        // An invite links two people who know each other, so they start out as friends.
+        // The bootstrap invite has no inviter.
+        if (invite.CreatedById is { } inviterId)
+        {
+            db.Friendships.Add(new Friendship
+            {
+                RequesterId = inviterId,
+                AddresseeId = user.Id,
+                Status = FriendshipStatus.Accepted,
+                CreatedAt = now,
+                RespondedAt = now,
+            });
+        }
+
         try
         {
             await db.SaveChangesAsync(ct);
