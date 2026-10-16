@@ -1,6 +1,7 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Friends;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Feed;
@@ -9,7 +10,11 @@ namespace FitTrack.Api.Features.Feed;
 /// Stores feed posts. A post refers to the workout or goal it is about and only exists
 /// while that entry is visible to friends.
 /// </summary>
-public sealed class FeedService(AppDbContext db, TimeProvider time)
+public sealed class FeedService(
+    AppDbContext db,
+    FriendshipService friends,
+    IFeedNotifier notifier,
+    TimeProvider time)
 {
     public const int PageSize = 20;
 
@@ -24,7 +29,9 @@ public sealed class FeedService(AppDbContext db, TimeProvider time)
         await db.SaveChangesAsync(ct);
 
         var authorName = await db.Users.Where(u => u.Id == post.UserId).Select(u => u.DisplayName).SingleAsync(ct);
-        return PostDto.From(post, authorName);
+        var dto = PostDto.From(post, authorName);
+        await notifier.PostCreatedAsync(await AudienceAsync(post.UserId, ct), dto, ct);
+        return dto;
     }
 
     /// <summary>
@@ -93,12 +100,27 @@ public sealed class FeedService(AppDbContext db, TimeProvider time)
     private async Task<List<ActivityPost>> RemoveAsync(IQueryable<ActivityPost> query, CancellationToken ct)
     {
         var posts = await query.ToListAsync(ct);
-        if (posts.Count > 0)
+        if (posts.Count == 0)
         {
-            db.ActivityPosts.RemoveRange(posts);
-            await db.SaveChangesAsync(ct);
+            return posts;
+        }
+
+        db.ActivityPosts.RemoveRange(posts);
+        await db.SaveChangesAsync(ct);
+
+        foreach (var post in posts)
+        {
+            await notifier.PostRemovedAsync(await AudienceAsync(post.UserId, ct), post.Id, ct);
         }
 
         return posts;
+    }
+
+    /// <summary>Everyone whose feed shows the author's posts: their friends and themselves.</summary>
+    private async Task<List<Guid>> AudienceAsync(Guid authorId, CancellationToken ct)
+    {
+        var audience = await friends.GetFriendIdsAsync(authorId, ct);
+        audience.Add(authorId);
+        return audience;
     }
 }

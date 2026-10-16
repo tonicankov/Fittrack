@@ -47,6 +47,11 @@ builder.Services.AddScoped<FriendshipService>();
 builder.Services.AddScoped<VisibilityService>();
 builder.Services.AddScoped<FeedService>();
 
+// Real-time feed updates
+builder.Services.AddSignalR()
+    .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddSingleton<IFeedNotifier, SignalRFeedNotifier>();
+
 // Authentication: JWT bearer tokens issued by TokenService
 builder.Services.AddOptions<JwtOptions>()
     .BindConfiguration(JwtOptions.SectionName)
@@ -59,6 +64,20 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     {
         var jwt = jwtOptions.Value;
         options.MapInboundClaims = false;
+        // Browsers cannot send headers on WebSocket requests, so SignalR passes the token in the query string
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            },
+        };
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = jwt.Issuer,
@@ -112,6 +131,7 @@ app.MapMeasurementEndpoints();
 app.MapGoalEndpoints();
 app.MapFriendEndpoints();
 app.MapFeedEndpoints();
+app.MapHub<FeedHub>(FeedHub.Path);
 
 app.Run();
 
