@@ -1,11 +1,12 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Feed;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Friends;
 
-public sealed class FriendshipService(AppDbContext db, TimeProvider time)
+public sealed class FriendshipService(AppDbContext db, IFeedNotifier notifier, TimeProvider time)
 {
     public async Task<List<FriendDto>> ListFriendsAsync(Guid userId, CancellationToken ct)
     {
@@ -97,6 +98,10 @@ public sealed class FriendshipService(AppDbContext db, TimeProvider time)
         db.Friendships.Add(friendship);
         await db.SaveChangesAsync(ct);
 
+        var sender = await db.Users.AsNoTracking().SingleAsync(u => u.Id == fromId, ct);
+        await notifier.FriendRequestReceivedAsync(target.Id,
+            new FriendRequestDto(friendship.Id, sender.Id, sender.DisplayName, "incoming", friendship.CreatedAt), ct);
+
         return new FriendRequestDto(friendship.Id, target.Id, target.DisplayName, "outgoing", friendship.CreatedAt);
     }
 
@@ -111,7 +116,11 @@ public sealed class FriendshipService(AppDbContext db, TimeProvider time)
         request.RespondedAt = time.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(ct);
 
-        var requester = await db.Users.SingleAsync(u => u.Id == request.RequesterId, ct);
+        var requester = await db.Users.AsNoTracking().SingleAsync(u => u.Id == request.RequesterId, ct);
+        var accepter = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId, ct);
+        await notifier.FriendRequestAcceptedAsync(requester.Id,
+            new FriendDto(accepter.Id, accepter.DisplayName, request.RespondedAt.Value), ct);
+
         return new FriendDto(requester.Id, requester.DisplayName, request.RespondedAt.Value);
     }
 
