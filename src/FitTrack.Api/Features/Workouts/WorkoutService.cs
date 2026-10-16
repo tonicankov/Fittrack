@@ -1,7 +1,9 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Feed;
 using FitTrack.Api.Features.Friends;
+using FitTrack.Api.Features.Goals;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitTrack.Api.Features.Workouts;
@@ -10,6 +12,8 @@ public sealed class WorkoutService(
     AppDbContext db,
     MemberSettingsProvider members,
     VisibilityService visibility,
+    FeedService feed,
+    GoalService goals,
     TimeProvider time)
 {
     public const int PageSize = 20;
@@ -24,6 +28,7 @@ public sealed class WorkoutService(
         Apply(workout, request, request.Visibility ?? settings.DefaultVisibility, now);
         db.Workouts.Add(workout);
         await db.SaveChangesAsync(ct);
+        await AfterSaveAsync(workout, settings, ct);
 
         return WorkoutDto.From(workout);
     }
@@ -41,6 +46,7 @@ public sealed class WorkoutService(
         // otherwise EF would take them for existing rows and try to update them.
         db.WorkoutExercises.AddRange(workout.Exercises);
         await db.SaveChangesAsync(ct);
+        await AfterSaveAsync(workout, await members.GetAsync(userId, ct), ct);
 
         return WorkoutDto.From(workout);
     }
@@ -48,6 +54,7 @@ public sealed class WorkoutService(
     public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct)
     {
         var workout = await LoadOwnAsync(userId, id, ct);
+        await feed.RemoveForWorkoutAsync(workout.Id, ct);
         db.Workouts.Remove(workout);
         await db.SaveChangesAsync(ct);
     }
@@ -88,6 +95,13 @@ public sealed class WorkoutService(
             .OrderBy(name => name)
             .Take(10)
             .ToListAsync(ct);
+    }
+
+    /// <summary>Keeps the feed post and goal progress in step with a saved workout.</summary>
+    private async Task AfterSaveAsync(Workout workout, MemberSettings settings, CancellationToken ct)
+    {
+        await feed.SyncWorkoutPostAsync(workout, ct);
+        await goals.EvaluateAsync(workout.UserId, TimeZones.LocalDate(workout.PerformedAt, settings.TimeZone), ct);
     }
 
     private async Task<Workout> LoadOwnAsync(Guid userId, Guid id, CancellationToken ct) =>

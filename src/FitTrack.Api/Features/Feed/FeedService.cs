@@ -27,6 +27,39 @@ public sealed class FeedService(AppDbContext db, TimeProvider time)
         return PostDto.From(post, authorName);
     }
 
+    /// <summary>
+    /// Keeps the "workout logged" post in step with the workout: created when the workout is
+    /// shared with friends, updated when it changes, removed when it becomes private.
+    /// </summary>
+    public async Task SyncWorkoutPostAsync(Workout workout, CancellationToken ct)
+    {
+        if (workout.Visibility != Visibility.Friends)
+        {
+            await RemoveForWorkoutAsync(workout.Id, ct);
+            return;
+        }
+
+        var summary = PostSummaries.Workout(workout);
+        var existing = await db.ActivityPosts.Where(p => p.WorkoutId == workout.Id).ToListAsync(ct);
+        if (existing.Count > 0)
+        {
+            existing.ForEach(p => p.Summary = summary);
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+
+        await PublishAsync(new ActivityPost
+        {
+            UserId = workout.UserId,
+            Type = PostType.WorkoutLogged,
+            WorkoutId = workout.Id,
+            Summary = summary,
+        }, ct);
+    }
+
+    public Task<bool> HasWeeklyPostAsync(Guid goalId, DateOnly weekStart, CancellationToken ct) =>
+        db.ActivityPosts.AnyAsync(p => p.GoalId == goalId && p.WeekStart == weekStart, ct);
+
     public Task RemoveForWorkoutAsync(Guid workoutId, CancellationToken ct) =>
         RemoveAsync(db.ActivityPosts.Where(p => p.WorkoutId == workoutId), ct);
 

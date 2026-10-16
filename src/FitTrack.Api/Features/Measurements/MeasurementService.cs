@@ -52,7 +52,7 @@ public sealed class MeasurementService(
         measurement.Visibility = request.Visibility ?? measurement.Visibility;
         await db.SaveChangesAsync(ct);
 
-        await goals.EvaluateAsync(userId, ct);
+        await goals.EvaluateAsync(userId, workoutDate: null, ct);
 
         return MeasurementDto.From(measurement);
     }

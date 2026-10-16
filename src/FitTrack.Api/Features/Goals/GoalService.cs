@@ -1,6 +1,7 @@
 using FitTrack.Api.Common;
 using FitTrack.Api.Data;
 using FitTrack.Api.Domain;
+using FitTrack.Api.Features.Feed;
 using FitTrack.Api.Features.Friends;
 using FitTrack.Api.Features.Meals;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ public sealed class GoalService(
     AppDbContext db,
     MemberSettingsProvider members,
     VisibilityService visibility,
+    FeedService feed,
     TimeProvider time)
 {
     public async Task<GoalDto> CreateAsync(Guid userId, CreateGoalRequest request, CancellationToken ct)
@@ -70,6 +72,7 @@ public sealed class GoalService(
         {
             goal.TargetDate = request.TargetDate;
         }
+        var wasShared = goal.Visibility == Visibility.Friends;
         goal.Visibility = request.Visibility ?? goal.Visibility;
         if (request.Status is { } status)
         {
@@ -78,12 +81,20 @@ public sealed class GoalService(
         }
 
         await db.SaveChangesAsync(ct);
+
+        if (wasShared && goal.Visibility == Visibility.Private)
+        {
+            await feed.RemoveForGoalAsync(goal.Id, ct);
+        }
+
         return ToDto(goal, await LoadProgressInputsAsync(userId, ct));
     }
 
     public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct)
     {
-        db.Goals.Remove(await LoadOwnAsync(userId, id, ct));
+        var goal = await LoadOwnAsync(userId, id, ct);
+        await feed.RemoveForGoalAsync(goal.Id, ct);
+        db.Goals.Remove(goal);
         await db.SaveChangesAsync(ct);
     }
 
@@ -116,10 +127,21 @@ public sealed class GoalService(
     }
 
     /// <summary>
-    /// Re-checks the member's active goals after new data was logged, and marks a
-    /// body-weight goal as achieved once the latest weight reaches the target.
+    /// Re-checks the member's active goals after new data was logged. Marks a body-weight goal
+    /// as achieved once the latest weight reaches the target, and, when <paramref name="workoutDate"/>
+    /// is given, checks the weekly workout target for that week. Goals shared with friends get
+    /// a feed post when that happens.
     /// </summary>
-    public async Task EvaluateAsync(Guid userId, CancellationToken ct)
+    public async Task EvaluateAsync(Guid userId, DateOnly? workoutDate, CancellationToken ct)
+    {
+        await EvaluateWeightGoalAsync(userId, ct);
+        if (workoutDate is { } date)
+        {
+            await EvaluateWeeklyGoalAsync(userId, date, ct);
+        }
+    }
+
+    private async Task EvaluateWeightGoalAsync(Guid userId, CancellationToken ct)
     {
         var goal = await db.Goals.SingleOrDefaultAsync(
             g => g.UserId == userId && g.Metric == GoalMetric.BodyWeight && g.Status == GoalStatus.Active, ct);
@@ -131,13 +153,54 @@ public sealed class GoalService(
         // A goal created before the first weigh-in starts from the first measurement
         goal.StartValue ??= weight;
 
-        if (GoalMath.IsWeightReached(goal.StartValue, goal.TargetValue, weight))
+        var reached = GoalMath.IsWeightReached(goal.StartValue, goal.TargetValue, weight);
+        if (reached)
         {
             goal.Status = GoalStatus.Achieved;
             goal.AchievedAt = time.GetUtcNow().UtcDateTime;
         }
 
         await db.SaveChangesAsync(ct);
+
+        if (reached && goal.Visibility == Visibility.Friends)
+        {
+            await feed.PublishAsync(new ActivityPost
+            {
+                UserId = userId,
+                Type = PostType.GoalAchieved,
+                GoalId = goal.Id,
+                Summary = PostSummaries.WeightGoalReached(goal.TargetValue),
+            }, ct);
+        }
+    }
+
+    private async Task EvaluateWeeklyGoalAsync(Guid userId, DateOnly workoutDate, CancellationToken ct)
+    {
+        var goal = await db.Goals.AsNoTracking().SingleOrDefaultAsync(
+            g => g.UserId == userId && g.Metric == GoalMetric.WorkoutsPerWeek && g.Status == GoalStatus.Active, ct);
+        if (goal is not { Visibility: Visibility.Friends })
+        {
+            return;
+        }
+
+        var tz = (await members.GetAsync(userId, ct)).TimeZone;
+        var weekStart = TimeZones.WeekStart(workoutDate);
+        var from = TimeZones.StartOfDayUtc(weekStart, tz);
+        var to = TimeZones.StartOfDayUtc(weekStart.AddDays(7), tz);
+        var count = await db.Workouts.CountAsync(w => w.UserId == userId && w.PerformedAt >= from && w.PerformedAt < to, ct);
+
+        // Posted once per week: the unique index on (GoalId, WeekStart) backs this check up
+        if (count >= goal.TargetValue && !await feed.HasWeeklyPostAsync(goal.Id, weekStart, ct))
+        {
+            await feed.PublishAsync(new ActivityPost
+            {
+                UserId = userId,
+                Type = PostType.WeeklyTargetMet,
+                GoalId = goal.Id,
+                WeekStart = weekStart,
+                Summary = PostSummaries.WeeklyTargetMet(goal.TargetValue),
+            }, ct);
+        }
     }
 
     private static void ValidateTarget(Validator v, GoalMetric metric, decimal? target, DateOnly? targetDate, DateOnly today)
