@@ -1,0 +1,687 @@
+/*
+ * FitTrack visual language
+ * Each kind of entry takes the colour of an Olympic bumper plate:
+ * workouts blue (20 kg), meals green (10 kg), body yellow (15 kg), goals red (25 kg).
+ * Numbers are set large in Barlow Condensed, like the figures on a plate or a gym clock.
+ */
+
+:root {
+  --ink: #1d2430;
+  --ink-soft: #4a5566;
+  --paper: #f3f5f7;
+  --surface: #ffffff;
+  --line: #d6dce3;
+  --line-strong: #b8c1cc;
+
+  --plate-blue: #2357c6;
+  --plate-green: #1e8a4c;
+  --plate-yellow: #e3a912;
+  --plate-red: #d33a2c;
+
+  --danger: #b4231a;
+  --focus: #2357c6;
+
+  --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+
+  --radius: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --tabbar-height: 64px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0 0 var(--space-3);
+}
+
+h1 {
+  font-size: 2.25rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--plate-blue);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  line-height: 1;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+/* ---------- App shell ---------- */
+
+.shell {
+  min-height: 100vh;
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: var(--paper);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 5px solid var(--plate-blue);
+  background: var(--paper);
+}
+
+.nav {
+  display: none;
+}
+
+.nav a,
+.tabbar a {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+
+.tabbar a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  border-top: 3px solid transparent;
+}
+
+.tabbar a.active {
+  color: var(--ink);
+  border-top-color: var(--ink);
+}
+
+@media (min-width: 760px) {
+  .shell {
+    padding-bottom: 0;
+  }
+
+  .nav {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .nav a {
+    color: #c9d1db;
+    padding: var(--space-1) 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  .nav a.active {
+    color: var(--paper);
+    border-bottom-color: var(--paper);
+  }
+
+  .tabbar {
+    display: none;
+  }
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.section {
+  margin-top: var(--space-6);
+}
+
+.subnav {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+}
+
+.subnav a {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.subnav a.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ---------- Kinds: the bumper plate colours ---------- */
+
+[data-kind='workout'] {
+  --kind: var(--plate-blue);
+}
+
+[data-kind='meal'] {
+  --kind: var(--plate-green);
+}
+
+[data-kind='body'] {
+  --kind: var(--plate-yellow);
+}
+
+[data-kind='goal'] {
+  --kind: var(--plate-red);
+}
+
+/* ---------- Entries ---------- */
+
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.entry {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--kind, var(--line-strong));
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+}
+
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.entry-title {
+  font-weight: 600;
+  margin: 0;
+}
+
+.entry-meta {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.entry-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.sets {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.95rem;
+}
+
+.sets li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.sets li:last-child {
+  border-bottom: 0;
+}
+
+/* ---------- Numbers ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--kind, var(--line-strong));
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.stat-unit {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-left: 2px;
+  color: var(--ink-soft);
+}
+
+.stat-label {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.progress {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--kind, var(--ink));
+  transition: width 300ms ease-out;
+}
+
+/* ---------- Forms ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form-row {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+/* Date and time inputs have a wide intrinsic size; let them shrink to their column */
+.form-row > *,
+input {
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+
+.field label,
+.field-label {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.field-hint {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--kind, var(--line-strong));
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  margin: 0;
+  min-width: 0;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 var(--space-1);
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.set-number {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--ink-soft);
+}
+
+.segmented {
+  display: inline-flex;
+  justify-self: start;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.btn-danger {
+  background: var(--surface);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-small {
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  font-size: 0.9rem;
+}
+
+.btn-link {
+  background: none;
+  border: 0;
+  color: var(--plate-blue);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ---------- Messages ---------- */
+
+.alert {
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  background: #fdeceb;
+  color: var(--danger);
+  border: 1px solid #f3c2be;
+}
+
+.notice {
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.empty {
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.empty p {
+  margin-bottom: var(--space-3);
+}
+
+/* ---------- Auth pages ---------- */
+
+.auth {
+  min-height: 100vh;
+  display: grid;
+  align-content: start;
+  padding: 150px var(--space-4) var(--space-5);
+  background:
+    radial-gradient(circle at 100% 0, transparent 0 80px, var(--plate-red) 80px 90px, transparent 90px),
+    radial-gradient(circle at 100% 0, transparent 0 110px, var(--plate-blue) 110px 120px, transparent 120px),
+    var(--paper);
+}
+
+@media (min-height: 760px) and (min-width: 760px) {
+  .auth {
+    align-content: center;
+    padding-top: var(--space-5);
+  }
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.auth-box .display {
+  margin-bottom: var(--space-2);
+}
+
+/* ---------- Feed ---------- */
+
+.post {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--kind, var(--ink));
+  color: var(--surface);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.post-new {
+  animation: arrive 600ms ease-out;
+}
+
+@keyframes arrive {
+  from {
+    background: #e8eefb;
+  }
+  to {
+    background: var(--surface);
+  }
+}
+
+/* ---------- Charts ---------- */
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+
+.chart-card h2 {
+  margin-left: var(--space-2);
+}
+
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.chart {
+  width: 100%;
+  height: 240px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
