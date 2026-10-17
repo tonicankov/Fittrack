@@ -48,6 +48,7 @@ builder.Services.AddScoped<FriendshipService>();
 builder.Services.AddScoped<VisibilityService>();
 builder.Services.AddScoped<FeedService>();
 builder.Services.AddScoped<StatsService>();
+builder.Services.AddScoped<ExportService>();
 
 // Real-time feed updates
 builder.Services.AddSignalR()

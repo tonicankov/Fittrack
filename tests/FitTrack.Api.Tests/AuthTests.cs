@@ -157,4 +157,18 @@ public class AuthTests(ApiFactory factory)
         Assert.True(used.IsUsed);
         Assert.Equal("Nadia", used.UsedByName);
     }
+
+    [Fact]
+    public async Task Members_can_download_all_their_data()
+    {
+        var member = await factory.RegisterAsync("Toni");
+        await member.Client.PostAsJsonAsync("/api/workouts", TestData.Workout("Leg day"));
+
+        var response = await member.Client.GetAsync("/api/me/export");
+        var export = await response.ReadAsync<ExportDto>();
+
+        Assert.Equal("attachment", response.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal("Toni", export.Profile.DisplayName);
+        Assert.Equal("Leg day", Assert.Single(export.Workouts).Name);
+    }
 }

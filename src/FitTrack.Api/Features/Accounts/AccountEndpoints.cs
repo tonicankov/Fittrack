@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using System.Text.Json;
 using FitTrack.Api.Auth;
+using Microsoft.Extensions.Options;
 
 namespace FitTrack.Api.Features.Accounts;
 
@@ -22,6 +24,19 @@ public static class AccountEndpoints
 
         me.MapPut("", async (UpdateProfileRequest request, ClaimsPrincipal user, AccountService accounts, CancellationToken ct) =>
             Results.Ok(await accounts.UpdateProfileAsync(user.GetUserId(), request, ct)));
+
+        me.MapGet("/export", async (
+            ClaimsPrincipal user,
+            ExportService export,
+            IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions> json,
+            TimeProvider time,
+            CancellationToken ct) =>
+        {
+            var data = await export.ExportAsync(user.GetUserId(), ct);
+            var options = new JsonSerializerOptions(json.Value.SerializerOptions) { WriteIndented = true };
+            var fileName = $"fittrack-export-{time.GetUtcNow():yyyy-MM-dd}.json";
+            return Results.File(JsonSerializer.SerializeToUtf8Bytes(data, options), "application/json", fileName);
+        });
 
         me.MapDelete("", async (ClaimsPrincipal user, AccountService accounts, CancellationToken ct) =>
         {
