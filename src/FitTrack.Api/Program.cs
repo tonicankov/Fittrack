@@ -10,6 +10,7 @@ using FitTrack.Api.Features.Goals;
 using FitTrack.Api.Features.Invites;
 using FitTrack.Api.Features.Meals;
 using FitTrack.Api.Features.Measurements;
+using FitTrack.Api.Features.Stats;
 using FitTrack.Api.Features.Workouts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,7 @@ builder.Services.AddScoped<GoalService>();
 builder.Services.AddScoped<FriendshipService>();
 builder.Services.AddScoped<VisibilityService>();
 builder.Services.AddScoped<FeedService>();
+builder.Services.AddScoped<StatsService>();
 
 // Real-time feed updates
 builder.Services.AddSignalR()
@@ -131,6 +133,7 @@ app.MapMeasurementEndpoints();
 app.MapGoalEndpoints();
 app.MapFriendEndpoints();
 app.MapFeedEndpoints();
+app.MapStatsEndpoints();
 app.MapHub<FeedHub>(FeedHub.Path);
 
 app.Run();
