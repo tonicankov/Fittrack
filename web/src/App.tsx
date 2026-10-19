@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import Layout from './components/Layout'
+import BodyPage from './pages/entries/BodyPage'
 import LogPage from './pages/entries/LogPage'
 import MealsPage from './pages/entries/MealsPage'
 import WorkoutsPage, { WorkoutEditorPage } from './pages/entries/WorkoutsPage'
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="workouts/new" element={<WorkoutEditorPage />} />
             <Route path="workouts/:id/edit" element={<WorkoutEditorPage />} />
             <Route path="meals" element={<MealsPage />} />
+            <Route path="body" element={<BodyPage />} />
           </Route>
           <Route path="progress" element={<Placeholder title="Progress" />} />
           <Route path="friends" element={<Placeholder title="Friends" />} />

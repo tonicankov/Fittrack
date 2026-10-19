@@ -9,6 +9,7 @@ export default function LogPage() {
         links={[
           { to: '/log/workouts', label: 'Workouts' },
           { to: '/log/meals', label: 'Meals' },
+          { to: '/log/body', label: 'Body' },
         ]}
       />
       <Outlet />
