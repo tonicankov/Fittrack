@@ -6,6 +6,8 @@ import LogPage from './pages/entries/LogPage'
 import MealsPage from './pages/entries/MealsPage'
 import WorkoutsPage, { WorkoutEditorPage } from './pages/entries/WorkoutsPage'
 import LoginPage from './pages/LoginPage'
+import GoalsPage from './pages/progress/GoalsPage'
+import ProgressPage from './pages/progress/ProgressPage'
 import RegisterPage from './pages/RegisterPage'
 
 function Placeholder({ title }: { title: string }) {
@@ -32,7 +34,10 @@ export default function App() {
             <Route path="meals" element={<MealsPage />} />
             <Route path="body" element={<BodyPage />} />
           </Route>
-          <Route path="progress" element={<Placeholder title="Progress" />} />
+          <Route path="progress" element={<ProgressPage />}>
+            <Route index element={<Navigate to="goals" replace />} />
+            <Route path="goals" element={<GoalsPage />} />
+          </Route>
           <Route path="friends" element={<Placeholder title="Friends" />} />
           <Route path="settings" element={<Placeholder title="Me" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
