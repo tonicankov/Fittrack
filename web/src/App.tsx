@@ -6,6 +6,7 @@ import LogPage from './pages/entries/LogPage'
 import MealsPage from './pages/entries/MealsPage'
 import WorkoutsPage, { WorkoutEditorPage } from './pages/entries/WorkoutsPage'
 import FeedPage from './pages/feed/FeedPage'
+import FriendProfilePage from './pages/friends/FriendProfilePage'
 import FriendsPage from './pages/friends/FriendsPage'
 import LoginPage from './pages/LoginPage'
 import GoalsPage from './pages/progress/GoalsPage'
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="goals" element={<GoalsPage />} />
           </Route>
           <Route path="friends" element={<FriendsPage />} />
+          <Route path="friends/:id" element={<FriendProfilePage />} />
           <Route path="settings" element={<Placeholder title="Me" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
