@@ -5,6 +5,7 @@ import BodyPage from './pages/entries/BodyPage'
 import LogPage from './pages/entries/LogPage'
 import MealsPage from './pages/entries/MealsPage'
 import WorkoutsPage, { WorkoutEditorPage } from './pages/entries/WorkoutsPage'
+import FeedPage from './pages/feed/FeedPage'
 import FriendsPage from './pages/friends/FriendsPage'
 import LoginPage from './pages/LoginPage'
 import GoalsPage from './pages/progress/GoalsPage'
@@ -26,7 +27,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route element={<Layout />}>
-          <Route index element={<Placeholder title="Feed" />} />
+          <Route index element={<FeedPage />} />
           <Route path="log" element={<LogPage />}>
             <Route index element={<Navigate to="workouts" replace />} />
             <Route path="workouts" element={<WorkoutsPage />} />

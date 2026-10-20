@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { FeedHubProvider } from '../lib/feedHub'
 
 const links = [
   { to: '/', label: 'Feed', end: true },
@@ -11,33 +12,35 @@ const links = [
 
 /** The frame around every page once you are logged in: top bar on wide screens, tab bar on phones. */
 export default function Layout() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   if (!user) return <Navigate to="/login" replace />
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <NavLink to="/" className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          FitTrack
-        </NavLink>
-        <nav className="nav" aria-label="Main">
+    <FeedHubProvider token={token}>
+      <div className="shell">
+        <header className="topbar">
+          <NavLink to="/" className="brand">
+            <span className="brand-mark" aria-hidden="true" />
+            FitTrack
+          </NavLink>
+          <nav className="nav" aria-label="Main">
+            {links.map((link) => (
+              <NavLink key={link.to} to={link.to} end={link.end}>
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+        </header>
+        <Outlet />
+        <nav className="tabbar" aria-label="Main">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.end}>
               {link.label}
             </NavLink>
           ))}
         </nav>
-      </header>
-      <Outlet />
-      <nav className="tabbar" aria-label="Main">
-        {links.map((link) => (
-          <NavLink key={link.to} to={link.to} end={link.end}>
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
-    </div>
+      </div>
+    </FeedHubProvider>
   )
 }
 

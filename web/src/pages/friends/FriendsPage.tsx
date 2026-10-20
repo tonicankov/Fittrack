@@ -4,6 +4,7 @@ import { api } from '../../api/client'
 import type { Friend, FriendRequest, Invite } from '../../api/types'
 import { Empty, ErrorAlert, Field, fieldError } from '../../components/Form'
 import { formatDate, initials } from '../../lib/format'
+import { useHubEvent } from '../../lib/feedHub'
 import { useAsync } from '../../lib/useAsync'
 
 function inviteLink(code: string) {
@@ -109,6 +110,10 @@ export default function FriendsPage() {
       setError(err)
     }
   }
+
+  // Requests and acceptances from others show up without a reload
+  useHubEvent('FriendRequestReceived', () => void requests.reload())
+  useHubEvent('FriendRequestAccepted', () => void Promise.all([friends.reload(), requests.reload()]))
 
   const incoming = requests.data?.filter((r) => r.direction === 'incoming') ?? []
   const outgoing = requests.data?.filter((r) => r.direction === 'outgoing') ?? []
