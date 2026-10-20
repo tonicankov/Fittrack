@@ -685,3 +685,30 @@ legend {
     transition-duration: 0.01ms !important;
   }
 }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-2);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table th {
+  font-weight: 600;
+}
+
+/* Chart marks: one hue per kind of data. Body uses a deeper amber than the plate yellow so the line keeps 3:1 contrast. */
+:root {
+  --chart-workout: #2357c6;
+  --chart-meal: #1e8a4c;
+  --chart-body: #a87a00;
+  --chart-grid: #e4e8ed;
+  --chart-axis: #4a5566;
+  --chart-target: #1d2430;
+}

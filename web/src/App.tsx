@@ -9,6 +9,7 @@ import FeedPage from './pages/feed/FeedPage'
 import FriendProfilePage from './pages/friends/FriendProfilePage'
 import FriendsPage from './pages/friends/FriendsPage'
 import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/progress/DashboardPage'
 import GoalsPage from './pages/progress/GoalsPage'
 import ProgressPage from './pages/progress/ProgressPage'
 import RegisterPage from './pages/RegisterPage'
@@ -38,7 +39,7 @@ export default function App() {
             <Route path="body" element={<BodyPage />} />
           </Route>
           <Route path="progress" element={<ProgressPage />}>
-            <Route index element={<Navigate to="goals" replace />} />
+            <Route index element={<DashboardPage />} />
             <Route path="goals" element={<GoalsPage />} />
           </Route>
           <Route path="friends" element={<FriendsPage />} />
