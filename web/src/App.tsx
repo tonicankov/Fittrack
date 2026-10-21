@@ -13,14 +13,7 @@ import DashboardPage from './pages/progress/DashboardPage'
 import GoalsPage from './pages/progress/GoalsPage'
 import ProgressPage from './pages/progress/ProgressPage'
 import RegisterPage from './pages/RegisterPage'
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <main className="page">
-      <h1>{title}</h1>
-    </main>
-  )
-}
+import SettingsPage from './pages/settings/SettingsPage'
 
 export default function App() {
   return (
@@ -44,7 +37,7 @@ export default function App() {
           </Route>
           <Route path="friends" element={<FriendsPage />} />
           <Route path="friends/:id" element={<FriendProfilePage />} />
-          <Route path="settings" element={<Placeholder title="Me" />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
