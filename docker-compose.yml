@@ -1,3 +1,5 @@
+# Everything in one command: docker compose up --build
+# Then open http://localhost:8080
 services:
   db:
     image: mysql:8.4
@@ -8,6 +10,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-fittrack_dev_password}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-fittrack_root_dev_password}
     ports:
+      # Lets the API run from your IDE against this database during development
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
@@ -16,6 +19,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: src/FitTrack.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Server=db;Port=3306;Database=fittrack;Uid=fittrack;Pwd=${MYSQL_PASSWORD:-fittrack_dev_password};AllowPublicKeyRetrieval=true"
+      # Set your own random key in .env for anything other than trying it out locally
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-local-docker-key-change-me-0123456789abcdef}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
 
 volumes:
   mysql-data:
