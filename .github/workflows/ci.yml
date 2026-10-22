@@ -56,3 +56,29 @@ jobs:
 
       - name: Test
         run: npm test
+
+  docker:
+    name: Docker stack smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and start the stack
+        run: docker compose up -d --build
+
+      # Goes through nginx like a browser would: health, the app, registration with the bootstrap invite
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 60); do curl -fs http://localhost:8080/health && break; sleep 2; done
+          curl -fs http://localhost:8080/health | grep -q Healthy
+          curl -fs http://localhost:8080/progress | grep -q 'id="root"'
+          CODE=$(docker compose logs api | grep -oE 'invite code [A-Z0-9]+' | head -1 | awk '{print $3}')
+          TOKEN=$(curl -fs -X POST http://localhost:8080/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d "{\"inviteCode\":\"$CODE\",\"email\":\"ci@example.com\",\"displayName\":\"CI\",\"password\":\"password123\"}" \
+            | jq -r .accessToken)
+          curl -fs http://localhost:8080/api/me -H "Authorization: Bearer $TOKEN" | jq -e '.displayName == "CI"'
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
